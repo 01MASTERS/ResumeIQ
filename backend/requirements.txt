@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+PyMuPDF
+python-docx
+scikit-learn
+sentence-transformers
+torch
+sqlalchemy
+pymysql
+cryptography
+alembic
+google-genai
+python-dateutil
