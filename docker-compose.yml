@@ -35,5 +35,17 @@ services:
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
+  frontend:
+    build: ./frontend
+    container_name: resumeiq-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
 volumes:
   mysql_data:
