@@ -22,6 +22,198 @@ SKILL_DB = [
     "Tableau", "Power BI", "Figma", "Jira", "Agile", "Scrum",
 ]
 
+SKILL_DEPENDENCIES = {
+    # Languages
+    "C++": ["Programming Fundamentals"],
+    "C": ["Programming Fundamentals"],
+    "Java": ["Programming Fundamentals", "OOP"],
+    "Python": ["Programming Fundamentals"],
+    "JavaScript": ["Programming Fundamentals"],
+    "TypeScript": ["JavaScript"],
+    "Go": ["Programming Fundamentals"],
+    "Rust": ["Programming Fundamentals"],
+    "C#": ["Programming Fundamentals", "OOP"],
+    "Kotlin": ["Java"],
+    "Swift": ["Programming Fundamentals"],
+    "PHP": ["Programming Fundamentals"],
+    "Ruby": ["Programming Fundamentals"],
+
+    # Frontend Basics
+    "HTML": [],
+    "CSS": ["HTML"],
+    "Bootstrap": ["CSS"],
+    "Tailwind CSS": ["CSS"],
+    "Sass": ["CSS"],
+
+    # Frontend Frameworks
+    "React": ["JavaScript"],
+    "Redux": ["React"],
+    "Zustand": ["React"],
+    "Vue.js": ["JavaScript"],
+    "Nuxt.js": ["Vue.js"],
+    "Angular": ["TypeScript"],
+    "Next.js": ["React", "TypeScript"],
+    "Remix": ["React"],
+    "Svelte": ["JavaScript"],
+    "SvelteKit": ["Svelte"],
+    "Astro": ["HTML", "CSS", "JavaScript"],
+
+    # Backend JavaScript
+    "Node.js": ["JavaScript"],
+    "Express.js": ["Node.js"],
+    "NestJS": ["Node.js", "TypeScript"],
+    "Socket.IO": ["Node.js"],
+    "GraphQL": ["APIs"],
+
+    # Python Backend
+    "Flask": ["Python"],
+    "Django": ["Python"],
+    "FastAPI": ["Python"],
+    "Celery": ["Python"],
+    "SQLAlchemy": ["Python", "SQL"],
+
+    # Java Backend
+    "Spring": ["Java"],
+    "Spring Boot": ["Java"],
+    "Spring MVC": ["Spring"],
+    "Spring Security": ["Spring Boot"],
+    "Hibernate": ["Java", "SQL"],
+    "JPA": ["Java", "SQL"],
+
+    # .NET
+    "ASP.NET Core": ["C#"],
+    "Entity Framework": ["C#", "SQL"],
+
+    # PHP
+    "Laravel": ["PHP"],
+    "CodeIgniter": ["PHP"],
+
+    # Ruby
+    "Rails": ["Ruby"],
+
+    # Databases
+    "SQL": [],
+    "MySQL": ["SQL"],
+    "PostgreSQL": ["SQL"],
+    "SQLite": ["SQL"],
+    "Oracle DB": ["SQL"],
+    "MongoDB": ["NoSQL"],
+    "Redis": ["NoSQL"],
+    "Cassandra": ["NoSQL"],
+    "Firebase": ["JavaScript"],
+    "Supabase": ["PostgreSQL"],
+    "Prisma": ["SQL", "Node.js"],
+
+    # APIs
+    "REST API": ["HTTP"],
+    "GraphQL API": ["GraphQL"],
+    "OpenAPI": ["REST API"],
+    "gRPC": ["Networking"],
+
+    # Version Control
+    "Git": [],
+    "GitHub": ["Git"],
+    "GitLab": ["Git"],
+
+    # DevOps
+    "Linux": [],
+    "Bash": ["Linux"],
+    "Docker": ["Linux"],
+    "Docker Compose": ["Docker"],
+    "Kubernetes": ["Docker"],
+    "Helm": ["Kubernetes"],
+    "Terraform": ["Cloud Computing"],
+    "Ansible": ["Linux"],
+    "Nginx": ["Linux", "Networking"],
+    "Apache": ["Linux"],
+
+    # CI/CD
+    "GitHub Actions": ["Git"],
+    "Jenkins": ["Git"],
+    "GitLab CI": ["Git"],
+
+    # Cloud
+    "AWS": ["Linux", "Networking"],
+    "Azure": ["Linux"],
+    "Google Cloud": ["Linux"],
+    "Vercel": ["Next.js"],
+    "Netlify": ["JavaScript"],
+
+    # Authentication
+    "JWT": ["REST API"],
+    "OAuth": ["HTTP"],
+    "OpenID Connect": ["OAuth"],
+    "Keycloak": ["OAuth", "OpenID Connect"],
+    "Ory Kratos": ["OAuth"],
+    "Ory Hydra": ["OAuth", "OpenID Connect"],
+
+    # Data Science
+    "NumPy": ["Python"],
+    "Pandas": ["Python"],
+    "Matplotlib": ["Python"],
+    "Seaborn": ["Matplotlib"],
+    "Scikit-learn": ["NumPy", "Pandas"],
+    "TensorFlow": ["Python", "Machine Learning"],
+    "PyTorch": ["Python", "Machine Learning"],
+    "XGBoost": ["Machine Learning"],
+
+    # AI
+    "Machine Learning": ["Python", "Statistics", "Linear Algebra"],
+    "Deep Learning": ["Machine Learning"],
+    "Computer Vision": ["Deep Learning"],
+    "NLP": ["Deep Learning"],
+    "LLMs": ["Deep Learning"],
+    "LangChain": ["Python", "LLMs"],
+    "LlamaIndex": ["Python", "LLMs"],
+    "Vector Databases": ["LLMs"],
+    "RAG": ["LLMs", "Vector Databases"],
+
+    # Mobile
+    "Android": ["Java"],
+    "Jetpack Compose": ["Kotlin"],
+    "React Native": ["React"],
+    "Flutter": ["Dart"],
+    "Dart": ["Programming Fundamentals"],
+
+    # Testing
+    "JUnit": ["Java"],
+    "Mockito": ["JUnit"],
+    "PyTest": ["Python"],
+    "Jest": ["JavaScript"],
+    "Cypress": ["JavaScript"],
+    "Playwright": ["JavaScript"],
+
+    # Misc
+    "Networking": [],
+    "HTTP": ["Networking"],
+    "WebSockets": ["HTTP"],
+    "Operating Systems": [],
+    "DBMS": [],
+    "OOP": [],
+    "Data Structures": ["Programming Fundamentals"],
+    "Algorithms": ["Data Structures"],
+    "System Design": [
+        "DBMS",
+        "Networking",
+        "Operating Systems",
+        "REST API"
+    ]
+}
+
+def _expand_skills(skill_set: set[str]) -> set[str]:
+    """Recursively expand skills to include their dependencies."""
+    expanded = set(skill_set)
+    while True:
+        added = set()
+        for skill in expanded:
+            parents = SKILL_DEPENDENCIES.get(skill, [])
+            for parent in parents:
+                if parent not in expanded:
+                    added.add(parent)
+        if not added:
+            break
+        expanded.update(added)
+    return expanded
 
 def _build_skill_pattern(skill: str) -> str:
     """Build a regex pattern for robust skill matching with word boundaries."""
@@ -78,8 +270,13 @@ def extract_contextual_skills(
     skills_text = parsed_sections.get("skills", "")
     full_text = " ".join(parsed_sections.values())
 
-    all_skills = set(extract_skills(full_text))
-    context_skills = set(extract_skills(experience_text + " " + projects_text))
+    all_skills_raw = set(extract_skills(full_text))
+    context_skills_raw = set(extract_skills(experience_text + " " + projects_text))
+    
+    # Expand skills to include indirect dependencies
+    all_skills = _expand_skills(all_skills_raw)
+    context_skills = _expand_skills(context_skills_raw)
+    
     list_only_skills = all_skills - context_skills
 
     # Build weights: validated skills get 1.0, list-only skills get 0.5

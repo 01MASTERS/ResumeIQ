@@ -17,6 +17,6 @@ def calculate_semantic_similarity(jd_text: str, resume_text: str) -> float:
         resume_embedding = model.encode(resume_text, convert_to_tensor=True)
         similarity = util.cos_sim(jd_embedding, resume_embedding)
         score = float(similarity.item() * 100)
-        return max(0.0, min(100.0, score))
+        return max(0.0, min(100.0, score * 1.5))
     except Exception:
         return 0.0

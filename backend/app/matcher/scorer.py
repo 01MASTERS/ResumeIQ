@@ -29,17 +29,17 @@ def calculate_experience_score(
     the candidate matches. Otherwise, a general score based on total experience.
     """
     if jd_required_yoe and jd_required_yoe > 0:
-        # Ratio-based scoring: 100% if exact match or above, scaled down below
+        # Ratio-based scoring: 100% if >= 80% match, scaled down below
         ratio = candidate_yoe / jd_required_yoe
-        if ratio >= 1.0:
+        if ratio >= 0.8:
             yoe_score = 100.0
-        elif ratio >= 0.7:
-            yoe_score = 60.0 + (ratio - 0.7) / 0.3 * 40.0
+        elif ratio >= 0.5:
+            yoe_score = 60.0 + (ratio - 0.5) / 0.3 * 40.0
         else:
-            yoe_score = max(0.0, ratio / 0.7 * 60.0)
+            yoe_score = max(0.0, ratio / 0.5 * 60.0)
     else:
-        # General scoring: 0 YoE = 20, scales up to 100 at 10+ years
-        yoe_score = min(100.0, 20.0 + candidate_yoe * 8.0)
+        # General scoring: 0 YoE = 30, scales up to 100 at 7+ years
+        yoe_score = min(100.0, 30.0 + candidate_yoe * 10.0)
 
     # Seniority bonus: higher seniority adds up to 10 points
     seniority_bonus = min(10.0, candidate_seniority * 2.0)
@@ -182,9 +182,9 @@ def execute_hybrid_scoring(
                 weights.get(s, 0.5) for s in matched_skills
             )
             max_possible = len(jd_set)
-            skill_match_score = (weighted_match / max_possible) * 100
+            skill_match_score = min(100.0, (weighted_match / max_possible) * 100 * 1.25)
         else:
-            skill_match_score = (len(matched_skills) / len(jd_set)) * 100
+            skill_match_score = min(100.0, (len(matched_skills) / len(jd_set)) * 100 * 1.25)
 
     # --- Component 2: TF-IDF ---
     tfidf_score = calculate_tfidf_similarity(jd_text, resume_text)
@@ -244,7 +244,7 @@ def execute_hybrid_scoring(
         if has_experience and has_llm:
             w_skill, w_keyword, w_contextual, w_experience, w_ai = 0.25, 0.05, 0.10, 0.10, 0.50
         elif has_experience:
-            w_skill, w_keyword, w_contextual, w_experience, w_ai = 0.45, 0.20, 0.25, 0.10, 0.0
+            w_skill, w_keyword, w_contextual, w_experience, w_ai = 0.25, 0.25, 0.35, 0.15, 0.0
         elif has_llm:
             w_skill, w_keyword, w_contextual, w_experience, w_ai = 0.30, 0.10, 0.10, 0.0, 0.50
         else:

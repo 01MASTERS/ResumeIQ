@@ -171,6 +171,13 @@ export default function CandidateEvaluation({ requirementsText }: CandidateEvalu
   const selectedFiles: FileList | null = watch("resumes");
   const use_custom_weights = watch("use_custom_weights");
   const use_ai = watch("use_ai");
+  const weight_skill = watch("weight_skill") || 0;
+  const weight_keyword = watch("weight_keyword") || 0;
+  const weight_contextual = watch("weight_contextual") || 0;
+  const weight_experience = watch("weight_experience") || 0;
+  const weight_ai = watch("weight_ai") || 0;
+
+  const currentTotalWeight = weight_skill + weight_keyword + weight_contextual + weight_experience + (use_ai ? weight_ai : 0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMsg(null);
@@ -210,6 +217,25 @@ export default function CandidateEvaluation({ requirementsText }: CandidateEvalu
       setFileUrls({});
     }
   }, [selectedFiles]);
+
+  useEffect(() => {
+    if (!use_custom_weights) {
+      if (use_ai) {
+        setValue("weight_skill", 25);
+        setValue("weight_keyword", 5);
+        setValue("weight_contextual", 10);
+        setValue("weight_experience", 10);
+        setValue("weight_ai", 50);
+      } else {
+        setValue("weight_skill", 25);
+        setValue("weight_keyword", 25);
+        setValue("weight_contextual", 35);
+        setValue("weight_experience", 15);
+        setValue("weight_ai", 0);
+      }
+    }
+  }, [use_ai, use_custom_weights, setValue]);
+
 
   useEffect(() => {
     if (isSubmitting) {
@@ -419,6 +445,11 @@ export default function CandidateEvaluation({ requirementsText }: CandidateEvalu
               <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
               <span className="ml-3 text-sm font-semibold text-slate-300">Customize Scoring Weights</span>
             </label>
+            {use_custom_weights && (
+              <span className={`text-xs font-bold px-2 py-1 rounded ${currentTotalWeight === 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                Total: {currentTotalWeight}% {currentTotalWeight !== 100 && '(Needs 100%)'}
+              </span>
+            )}
           </div>
           
           {errors.use_custom_weights && (
@@ -426,29 +457,31 @@ export default function CandidateEvaluation({ requirementsText }: CandidateEvalu
           )}
 
           {use_custom_weights && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-400">Skill Alignment (%)</label>
-                <input type="number" {...register("weight_skill", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-400">Keyword Fit (%)</label>
-                <input type="number" {...register("weight_keyword", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-400">Contextual (%)</label>
-                <input type="number" {...register("weight_contextual", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-400">Experience (%)</label>
-                <input type="number" {...register("weight_experience", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
-              </div>
-              {use_ai && (
+            <div className="flex flex-col gap-3 mt-2">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-slate-400">AI Evaluation (%)</label>
-                  <input type="number" {...register("weight_ai", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
+                  <label className="text-xs text-slate-400">Skill Alignment (%)</label>
+                  <input type="number" {...register("weight_skill", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
                 </div>
-              )}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-400">Keyword Fit (%)</label>
+                  <input type="number" {...register("weight_keyword", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-400">Contextual (%)</label>
+                  <input type="number" {...register("weight_contextual", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-400">Experience (%)</label>
+                  <input type="number" {...register("weight_experience", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
+                </div>
+                {use_ai && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-slate-400">AI Evaluation (%)</label>
+                    <input type="number" {...register("weight_ai", { valueAsNumber: true })} className="bg-slate-800 border border-slate-700 rounded p-2 text-white text-sm" />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
