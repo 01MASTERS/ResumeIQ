@@ -35,6 +35,8 @@ def _run_candidate_pipeline(
     jd_required_yoe: float | None,
     knockout_criteria: dict,
     use_ai: bool = True,
+    use_ollama: bool = False,
+    ollama_model: str = "",
     custom_weights: dict | None = None,
 ) -> dict:
     """
@@ -77,6 +79,8 @@ def _run_candidate_pipeline(
             resume_sections=parsed_sections,
             job_description=job_description,
             candidate_name=candidate_name,
+            use_ollama=use_ollama,
+            ollama_model=ollama_model,
         )
 
     # Step 6: Hybrid scoring
@@ -173,6 +177,8 @@ async def upload_resumes(
     files: list[UploadFile] = File(...),
     job_description: str = Form(...),
     use_ai: str = Form("true"),
+    use_ollama: str = Form("false"),
+    ollama_model: str = Form(""),
     use_custom_weights: str = Form("false"),
     weight_skill: int = Form(0),
     weight_keyword: int = Form(0),
@@ -263,6 +269,8 @@ async def upload_resumes(
             jd_required_yoe=jd_required_yoe,
             knockout_criteria=knockout_criteria,
             use_ai=use_ai.lower() == "true",
+            use_ollama=use_ollama.lower() == "true",
+            ollama_model=ollama_model,
             custom_weights=custom_weights,
         )
         candidates_data.append(candidate_data)
@@ -300,6 +308,8 @@ async def analyze_json_resumes(
             jd_skills=jd_skills,
             jd_required_yoe=jd_required_yoe,
             knockout_criteria=knockout_criteria,
+            use_ollama=request.use_ollama,
+            ollama_model=request.ollama_model,
         )
         candidates_data.append(candidate_data)
 

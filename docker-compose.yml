@@ -28,6 +28,7 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: mysql+pymysql://root:pass@db:3306/resumeiq
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
     depends_on:
       db:
         condition: service_healthy

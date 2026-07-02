@@ -55,7 +55,7 @@ export default function RequirementsForm({ onRequirementsSubmit }: RequirementsF
         <div className="flex flex-col relative group">
           <label htmlFor="jd-input" className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
             <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            Position Requirements
+            Job Description
           </label>
           <div className="relative">
             <div className={`absolute -inset-0.5 rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500 ${errors.job_description ? "bg-rose-500" : "bg-gradient-to-r from-indigo-500 to-purple-500"}`}></div>
@@ -94,7 +94,7 @@ export default function RequirementsForm({ onRequirementsSubmit }: RequirementsF
               </>
             ) : (
               <>
-                Configure Evaluation Criteria
+                Parse Job Description
                 <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
               </>
             )}

@@ -13,3 +13,4 @@ cryptography
 alembic
 google-genai
 python-dateutil
+requests

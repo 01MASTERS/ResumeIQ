@@ -27,3 +27,5 @@ class JsonAnalysisRequest(BaseModel):
         ..., min_length=1,
         description="List of candidate resumes as text",
     )
+    use_ollama: bool = Field(False, description="Whether to use local Ollama model")
+    ollama_model: str = Field("", description="The Ollama model to use")

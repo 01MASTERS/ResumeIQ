@@ -56,7 +56,7 @@ The backend is responsible for all heavy lifting. When resumes are uploaded:
 3. **Matcher Layer**: 
    - Uses `scikit-learn` to calculate TF-IDF keyword overlap.
    - Uses `sentence-transformers/all-MiniLM-L6-v2` to calculate deep semantic similarity.
-   - Uses an LLM agent to provide a human-readable verdict and identify strengths/weaknesses.
+   - Uses an LLM agent (Google Gemini 2.5 Flash or Local Ollama Models like Gemma 3) to provide a human-readable verdict and identify strengths/weaknesses.
 4. **Database Layer**: Saves historical analyses to a MySQL database using SQLAlchemy.
 
 ### 💻 Frontend (Next.js)
@@ -70,6 +70,7 @@ The frontend uses Next.js 14's App Router for fast performance and optimal rende
 
 ### Prerequisites
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose installed.
+- [Ollama](https://ollama.com/) (Optional, required only if you want to use local LLM models for evaluation).
 - Node.js (Optional, only if running the frontend locally outside of Docker).
 
 ### Setup Instructions

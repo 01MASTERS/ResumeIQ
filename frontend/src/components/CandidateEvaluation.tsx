@@ -14,6 +14,8 @@ const formSchema = z.object({
     .any()
     .refine((files) => files && files.length > 0, "Please select at least one resume file."),
   use_ai: z.boolean().default(true),
+  use_ollama: z.boolean().default(false),
+  ollama_model: z.string().default("gemma4:31b-cloud"),
   use_custom_weights: z.boolean().default(false),
   weight_skill: z.number().min(0).max(100).default(25),
   weight_keyword: z.number().min(0).max(100).default(5),
@@ -159,6 +161,8 @@ export default function CandidateEvaluation({ requirementsText }: CandidateEvalu
     resolver: zodResolver(formSchema),
     defaultValues: {
       use_ai: true,
+      use_ollama: false,
+      ollama_model: "gemma4:31b-cloud",
       use_custom_weights: false,
       weight_skill: 25,
       weight_keyword: 5,
@@ -171,6 +175,7 @@ export default function CandidateEvaluation({ requirementsText }: CandidateEvalu
   const selectedFiles: FileList | null = watch("resumes");
   const use_custom_weights = watch("use_custom_weights");
   const use_ai = watch("use_ai");
+  const use_ollama = watch("use_ollama");
   const weight_skill = watch("weight_skill") || 0;
   const weight_keyword = watch("weight_keyword") || 0;
   const weight_contextual = watch("weight_contextual") || 0;
@@ -308,6 +313,8 @@ export default function CandidateEvaluation({ requirementsText }: CandidateEvalu
     const formData = new FormData();
     formData.append("job_description", requirementsText);
     formData.append("use_ai", data.use_ai ? "true" : "false");
+    formData.append("use_ollama", data.use_ollama ? "true" : "false");
+    formData.append("ollama_model", data.ollama_model);
     formData.append("use_custom_weights", data.use_custom_weights ? "true" : "false");
     formData.append("weight_skill", data.weight_skill.toString());
     formData.append("weight_keyword", data.weight_keyword.toString());
@@ -430,12 +437,36 @@ export default function CandidateEvaluation({ requirementsText }: CandidateEvalu
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" {...register("use_ai")} />
-            <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-            <span className="ml-3 text-sm font-semibold text-slate-300">Enable AI Analysis (Deep qualitative review)</span>
-          </label>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" {...register("use_ai")} />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+              <span className="ml-3 text-sm font-semibold text-slate-300">Enable AI Analysis (Deep qualitative review)</span>
+            </label>
+          </div>
+          
+          {use_ai && (
+            <div className="ml-14 flex items-center gap-4">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" {...register("use_ollama")} />
+                <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
+                <span className="ml-3 text-sm font-semibold text-slate-400">Use Local Model (Ollama)</span>
+              </label>
+              
+              {use_ollama && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Model:</span>
+                  <input 
+                    type="text" 
+                    {...register("ollama_model")} 
+                    className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500 w-40"
+                    placeholder="e.g. gemma4:31b-cloud"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 p-4 bg-slate-900/40 border border-slate-800 rounded-xl">
