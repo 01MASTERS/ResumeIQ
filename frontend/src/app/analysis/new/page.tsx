@@ -7,9 +7,11 @@ import { ResumeUploadStep } from "@/components/analysis/resume-upload-step";
 import { AIConfigStep, AIConfigData } from "@/components/analysis/ai-config-step";
 import { ProcessingStep } from "@/components/analysis/processing-step";
 import { LeaderboardStep } from "@/components/analysis/leaderboard-step";
-import { CandidateResult } from "@/lib/api";
-import { Check } from "lucide-react";
+import { CandidateResult, uploadAndParse } from "@/lib/api";
+import { Check, FileText, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import Stepper, { Step as StepperStep } from "@/components/Stepper";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 type Step = 'job_description' | 'resume_upload' | 'ai_config' | 'processing' | 'results';
 
@@ -35,8 +37,10 @@ export default function NewAnalysisPage() {
 
   const [jobDescription, setJobDescription] = useState<string>("");
   const [uploadPayload, setUploadPayload] = useState<{ type: 'files', files: File[] } | { type: 'json', data: string } | null>(null);
+  const [parsePromise, setParsePromise] = useState<Promise<any> | null>(null);
   const [aiConfig, setAiConfig] = useState<AIConfigData | null>(null);
   const [results, setResults] = useState<CandidateResult[]>([]);
+  const [isJdExpanded, setIsJdExpanded] = useState(false);
 
   const stepLabels: Record<string, string> = {
     'job_description': 'Job Details',
@@ -65,14 +69,15 @@ export default function NewAnalysisPage() {
       <div className="fixed -bottom-40 -left-40 w-[400px] h-[400px] bg-accent/[0.02] blur-[100px] rounded-full pointer-events-none z-0" />
 
       <motion.div variants={itemVariants} className="relative z-10">
-        <Stepper
-          className="!p-0 !min-h-0 !items-start w-full"
-          activeStep={currentStepIndex}
-          initialStep={1}
+        <div className={currentStepIndex > 3 ? "hidden" : "block"}>
+          <Stepper
+            className="!p-0 !min-h-0 !items-start w-full"
+            activeStep={currentStepIndex}
+            initialStep={1}
           footerClassName="hidden"
           stepCircleContainerClassName="!max-w-full !w-full !shadow-none !border-none !bg-transparent !m-0 !p-0"
           stepContainerClassName={`sticky top-0 z-50 bg-background/95 backdrop-blur-xl rounded-b-3xl border-b border-white/[0.02] shadow-sm mb-12 py-6 relative px-4 md:px-12 max-w-2xl mx-auto ${currentStepIndex > 3 ? 'hidden' : 'hidden md:flex'}`}
-          contentClassName="rounded-2xl border border-white/[0.06] bg-card/30 backdrop-blur-sm p-6 md:p-10 relative overflow-hidden min-h-[550px] flex flex-col w-full"
+          contentClassName="rounded-2xl border border-white/[0.06] bg-card/30 backdrop-blur-sm p-6 md:p-10 relative min-h-[550px] flex flex-col w-full"
           disableStepIndicators={true} // disable clicking on the steps directly since we have validation
         >
           <StepperStep>
@@ -89,6 +94,17 @@ export default function NewAnalysisPage() {
               key="upload"
               onNext={(payload) => {
                 setUploadPayload(payload);
+                if (payload.type === 'files') {
+                  const formData = new FormData();
+                  formData.append('job_description', jobDescription);
+                  payload.files.forEach(f => formData.append('files', f));
+                  
+                  // Kick off async upload and parsing!
+                  const promise = uploadAndParse(formData, { timeout: 300000 });
+                  setParsePromise(promise);
+                } else {
+                  setParsePromise(null);
+                }
                 setCurrentStep('ai_config');
               }}
               onBack={() => setCurrentStep('job_description')}
@@ -106,6 +122,7 @@ export default function NewAnalysisPage() {
             />
           </StepperStep>
         </Stepper>
+        </div>
 
         <AnimatePresence mode="wait">
           {currentStep === 'processing' && (
@@ -114,12 +131,13 @@ export default function NewAnalysisPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="rounded-2xl border border-white/[0.06] bg-card/30 backdrop-blur-sm p-6 md:p-10 relative overflow-hidden min-h-[550px] flex flex-col"
+              className="rounded-2xl border border-white/[0.06] bg-card/30 backdrop-blur-sm p-6 md:p-10 relative overflow-hidden flex flex-col justify-center min-h-[400px]"
             >
               <ProcessingStep
                 jobDescription={jobDescription}
                 uploadPayload={uploadPayload}
                 aiConfig={aiConfig}
+                parsePromise={parsePromise}
                 onComplete={(res) => {
                   setResults(res);
                   setCurrentStep('results');
@@ -137,10 +155,48 @@ export default function NewAnalysisPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="rounded-2xl border border-white/[0.06] bg-card/30 backdrop-blur-sm p-6 md:p-10 relative overflow-hidden min-h-[550px] flex flex-col"
+              className="rounded-2xl border border-white/[0.06] bg-card/30 backdrop-blur-sm p-6 md:p-10 relative flex flex-col gap-6"
             >
+              {/* Job Description */}
+              <Card className="bg-white/[0.02] border-white/[0.06]">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium uppercase tracking-wider flex items-center gap-1.5 text-primary">
+                    <FileText className="w-3.5 h-3.5" /> Job Description
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative flex flex-col items-start">
+                    <p className={`text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed transition-all ${isJdExpanded ? '' : 'line-clamp-3'}`}>
+                      {jobDescription}
+                    </p>
+                    {jobDescription && jobDescription.length > 250 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsJdExpanded(!isJdExpanded)}
+                        className="mt-2 text-[10px] text-primary hover:text-primary/80 h-6 px-2 -ml-2"
+                      >
+                        {isJdExpanded ? (
+                          <><ChevronUp className="w-3 h-3 mr-1" /> Show Less</>
+                        ) : (
+                          <><ChevronDown className="w-3 h-3 mr-1" /> View Full Description</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               <LeaderboardStep
                 results={results}
+                onReset={() => {
+                  setJobDescription("");
+                  setUploadPayload(null);
+                  setAiConfig(null);
+                  setResults([]);
+                  setIsJdExpanded(false);
+                  setCurrentStep("job_description");
+                }}
               />
             </motion.div>
           )}

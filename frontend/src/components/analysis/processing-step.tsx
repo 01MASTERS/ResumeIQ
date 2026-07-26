@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { uploadResumes, analyzeJson, CandidateResult } from "@/lib/api";
+import { analyzeJson, CandidateResult, analyzeSession } from "@/lib/api";
 import { AIConfigData } from "./ai-config-step";
 import { toast } from "sonner";
 import { BrainCircuit } from "lucide-react";
@@ -11,6 +11,7 @@ interface ProcessingStepProps {
   jobDescription: string;
   uploadPayload: { type: 'files', files: File[] } | { type: 'json', data: string } | null;
   aiConfig: AIConfigData | null;
+  parsePromise?: Promise<any> | null;
   onComplete: (results: CandidateResult[]) => void;
   onError: () => void;
 }
@@ -24,7 +25,7 @@ const MESSAGES = [
   "Finalizing leaderboard ranking..."
 ];
 
-export function ProcessingStep({ jobDescription, uploadPayload, aiConfig, onComplete, onError }: ProcessingStepProps) {
+export function ProcessingStep({ jobDescription, uploadPayload, aiConfig, parsePromise, onComplete, onError }: ProcessingStepProps) {
   const [messageIndex, setMessageIndex] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -51,28 +52,32 @@ export function ProcessingStep({ jobDescription, uploadPayload, aiConfig, onComp
         let results: any;
         
         if (uploadPayload?.type === 'files') {
-          const formData = new FormData();
-          formData.append('job_description', jobDescription);
-          
-          if (aiConfig) {
-            formData.append('use_ai', aiConfig.use_ai ? "true" : "false");
-            formData.append('use_ollama', aiConfig.use_ollama ? "true" : "false");
-            formData.append('ollama_model', aiConfig.ollama_model || "");
-            formData.append('use_custom_weights', aiConfig.use_custom_weights ? "true" : "false");
-            if (aiConfig.use_custom_weights && aiConfig.weights) {
-              formData.append('weight_skill', aiConfig.weights.skill_match.toString());
-              formData.append('weight_keyword', aiConfig.weights.keyword_match.toString());
-              formData.append('weight_contextual', aiConfig.weights.contextual_match.toString());
-              formData.append('weight_experience', aiConfig.weights.experience.toString());
-              formData.append('weight_ai', aiConfig.weights.ai_score.toString());
-            }
+          // Wait for Phase 1 to finish parsing PDFs
+          let sessionId = null;
+          if (parsePromise) {
+            const parseResult = await parsePromise;
+            sessionId = parseResult.session_id;
+          } else {
+            throw new Error("No upload session found.");
           }
           
-          uploadPayload.files.forEach(file => {
-            formData.append('files', file);
-          });
+          // Execute Phase 2 (AI Evaluation and Scoring)
+          const payload: any = {
+            use_ai: aiConfig?.use_ai ?? true,
+            use_ollama: aiConfig?.use_ollama ?? false,
+            ollama_model: aiConfig?.ollama_model || "",
+            use_custom_weights: aiConfig?.use_custom_weights ?? false,
+          };
           
-          results = await uploadResumes(formData, { timeout: 300000 });
+          if (aiConfig?.use_custom_weights && aiConfig.weights) {
+            payload.weight_skill = aiConfig.weights.skill_match;
+            payload.weight_keyword = aiConfig.weights.keyword_match;
+            payload.weight_contextual = aiConfig.weights.contextual_match;
+            payload.weight_experience = aiConfig.weights.experience;
+            payload.weight_ai = aiConfig.weights.ai_score;
+          }
+          
+          results = await analyzeSession(sessionId, payload, { timeout: 300000 });
         } else if (uploadPayload?.type === 'json') {
           const payload = {
             job_description: jobDescription,
@@ -117,7 +122,7 @@ export function ProcessingStep({ jobDescription, uploadPayload, aiConfig, onComp
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
-      className="flex flex-col items-center justify-center min-h-[500px]"
+      className="flex flex-col items-center justify-center py-10 w-full"
     >
       <div className="relative mb-12 flex items-center justify-center">
         {/* Animated glowing orbs */}

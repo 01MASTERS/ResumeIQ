@@ -94,6 +94,21 @@ export const uploadResumes = async (formData: FormData, config: any) => {
   return mapAnalysisResponse(data);
 };
 
+export const uploadAndParse = async (formData: FormData, config: any) => {
+  const { data } = await api.post('/upload-and-parse', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    ...config,
+  });
+  return data;
+};
+
+export const analyzeSession = async (sessionId: string | number, payload: any, config: any) => {
+  const { data } = await api.post(`/analyze-session/${sessionId}`, payload, config);
+  return mapAnalysisResponse(data);
+};
+
 export const analyzeJson = async (payload: any, config: any) => {
   const { data } = await api.post('/analyze-json', payload, config);
   return mapAnalysisResponse(data);

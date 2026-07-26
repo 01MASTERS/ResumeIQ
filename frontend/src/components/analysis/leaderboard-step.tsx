@@ -27,6 +27,7 @@ import { toast } from "sonner";
 
 interface LeaderboardStepProps {
   results: CandidateResult[];
+  onReset?: () => void;
 }
 
 const REC_COLORS: Record<string, string> = {
@@ -43,7 +44,7 @@ const PIE_COLORS: Record<string, string> = {
   'Disqualified': '#f43f5e'
 };
 
-export function LeaderboardStep({ results }: LeaderboardStepProps) {
+export function LeaderboardStep({ results, onReset }: LeaderboardStepProps) {
   const [minScore, setMinScore] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -57,26 +58,24 @@ export function LeaderboardStep({ results }: LeaderboardStepProps) {
     return results.filter(r => r.overall_score >= minScore).sort((a, b) => a.rank - b.rank);
   }, [results, minScore]);
 
-  const toggleSelect = (name: string) => {
-    setSelectedIds(prev => 
-      prev.includes(name) ? prev.filter(id => id !== name) : [...prev, name]
-    );
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredResults.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredResults.map(r => r.candidate_name));
+      setSelectedIds(filteredResults.map(r => r.filename));
     }
   };
 
   const handleSendInvites = async () => {
     setIsSending(true);
     try {
-      const candidatesToInvite = selectedIds.map(name => {
-        const candidate = results.find(r => r.candidate_name === name);
-        return { name, email: candidate?.email || "" };
+      const candidatesToInvite = selectedIds.map(id => {
+        const candidate = results.find(r => r.filename === id);
+        return { name: candidate?.candidate_name || "Unknown", email: candidate?.email || "" };
       });
       await inviteCandidates({
         candidates: candidatesToInvite,
@@ -106,17 +105,24 @@ export function LeaderboardStep({ results }: LeaderboardStepProps) {
     return Object.entries(counts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
   }, [results]);
 
+  const hasAiEvaluation = useMemo(() => {
+    return results.some(r => r.llm_score > 0 || (r.llm_verdict && r.llm_verdict.length > 0));
+  }, [results]);
+
   const avgScores = useMemo(() => {
     if (results.length === 0) return [];
     const avg = (key: keyof CandidateResult) => Math.round(results.reduce((acc, r) => acc + (r[key] as number), 0) / results.length);
-    return [
+    const scores = [
       { subject: 'Skills', A: avg('skill_match'), fullMark: 100 },
       { subject: 'Keywords', A: avg('tf_idf_similarity'), fullMark: 100 },
       { subject: 'Context', A: avg('semantic_similarity'), fullMark: 100 },
       { subject: 'Experience', A: avg('experience'), fullMark: 100 },
-      { subject: 'AI Score', A: avg('llm_score'), fullMark: 100 },
     ];
-  }, [results]);
+    if (hasAiEvaluation) {
+      scores.push({ subject: 'AI Score', A: avg('llm_score'), fullMark: 100 });
+    }
+    return scores;
+  }, [results, hasAiEvaluation]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]";
@@ -136,6 +142,15 @@ export function LeaderboardStep({ results }: LeaderboardStepProps) {
           <h2 className="text-3xl font-bold tracking-tight">Analysis Results</h2>
           <p className="text-muted-foreground">Review, filter, and invite top candidates.</p>
         </div>
+        {onReset && (
+          <Button 
+            onClick={onReset}
+            variant="outline"
+            className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 hover:text-primary gap-2 rounded-xl"
+          >
+            <Plus className="w-4 h-4" /> Start New Analysis
+          </Button>
+        )}
       </div>
 
 
@@ -186,12 +201,12 @@ export function LeaderboardStep({ results }: LeaderboardStepProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredResults.map((candidate) => (
-                <TableRow key={candidate.candidate_name} className="border-white/5 hover:bg-white/5 transition-colors group">
+              filteredResults.map((candidate, index) => (
+                <TableRow key={`${candidate.filename}-${index}`} className="border-white/5 hover:bg-white/5 transition-colors group">
                   <TableCell className="py-2">
                     <Checkbox 
-                      checked={selectedIds.includes(candidate.candidate_name)}
-                      onCheckedChange={() => toggleSelect(candidate.candidate_name)}
+                      checked={selectedIds.includes(candidate.filename)}
+                      onCheckedChange={() => toggleSelect(candidate.filename)}
                     />
                   </TableCell>
                   <TableCell className="text-center font-mono font-medium text-muted-foreground py-2 text-xs">
@@ -277,14 +292,14 @@ export function LeaderboardStep({ results }: LeaderboardStepProps) {
                 <AccordionContent className="px-6 pb-6 pt-2">
                   <div className="flex flex-col gap-6">
                     {/* Dynamic Score Breakdown (Horizontal Row like v1) */}
-                    <div className="grid gap-3 bg-secondary/30 rounded-xl p-4 border border-white/5 relative z-10 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                    <div className={`grid gap-3 bg-secondary/30 rounded-xl p-4 border border-white/5 relative z-10 grid-cols-2 sm:grid-cols-3 ${hasAiEvaluation ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
                       {[
                         { label: 'Skill Match', value: candidate.skill_match, color: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' },
                         { label: 'Keyword Fit', value: candidate.tf_idf_similarity, color: 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' },
                         { label: 'Contextual', value: candidate.semantic_similarity, color: 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' },
                         { label: 'Experience', value: candidate.experience, color: 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' },
-                        { label: 'AI Score', value: candidate.llm_score, color: 'bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]' },
-                      ].map((score, idx) => (
+                        hasAiEvaluation ? { label: 'AI Score', value: candidate.llm_score, color: 'bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]' } : null,
+                      ].filter(Boolean).map((score: any, idx) => (
                         <div key={score.label} className={idx !== 0 ? "lg:border-l lg:border-white/5 lg:pl-3" : ""}>
                           <div className="flex justify-between items-end mb-1">
                             <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none tracking-wider">{score.label}</p>

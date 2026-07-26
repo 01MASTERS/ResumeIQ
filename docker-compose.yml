@@ -37,13 +37,13 @@ services:
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   frontend:
-    build: ./frontendv3
+    build: ./frontend
     container_name: resumeiq-frontend
     restart: always
     ports:
       - "3000:3000"
     volumes:
-      - ./frontendv3:/app
+      - ./frontend:/app
       - /app/node_modules
     depends_on:
       - backend

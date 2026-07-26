@@ -16,6 +16,18 @@ from app.matcher.scorer import extract_candidate_name, execute_hybrid_scoring
 from app.matcher.knockout_filter import extract_knockout_criteria, apply_knockout
 from app.matcher.llm_evaluator import evaluate_candidate
 from app.schemas.jd_schema import JsonAnalysisRequest
+from pydantic import BaseModel
+
+class AnalyzeSessionRequest(BaseModel):
+    use_ai: bool = True
+    use_ollama: bool = False
+    ollama_model: str = ""
+    use_custom_weights: bool = False
+    weight_skill: int = 0
+    weight_keyword: int = 0
+    weight_contextual: int = 0
+    weight_experience: int = 0
+    weight_ai: int = 0
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +288,163 @@ async def upload_resumes(
         candidates_data.append(candidate_data)
 
     return _persist_analysis(db, job_description, candidates_data)
+
+
+# ==============================================================================
+# Endpoint 1.5: Async File Upload & Parsing (Phase 1)
+# ==============================================================================
+
+@router.post("/upload-and-parse")
+async def upload_and_parse(
+    files: list[UploadFile] = File(...),
+    job_description: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    if not job_description.strip():
+        raise HTTPException(status_code=400, detail="Job description is required.")
+    if not files or len(files) == 0:
+        raise HTTPException(status_code=400, detail="At least one resume file is required.")
+
+    new_analysis = Analysis(job_description=job_description)
+    db.add(new_analysis)
+    db.flush()
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    for file in files:
+        if not file.filename: continue
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS: continue
+
+        timestamp = int(time.time() * 1000)
+        saved_filename = f"{timestamp}_{file.filename}"
+        file_path = os.path.join(UPLOAD_DIR, saved_filename)
+        
+        try:
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        except Exception:
+            continue
+        finally:
+            await file.close()
+
+        if os.path.getsize(file_path) > MAX_FILE_SIZE:
+            os.remove(file_path)
+            continue
+            
+        try:
+            extracted_text = extract_text(file_path, ext)
+        except ValueError:
+            if os.path.exists(file_path): os.remove(file_path)
+            continue
+
+        c_name = extract_candidate_name(extracted_text, file.filename)
+        
+        db_candidate = CandidateModel(
+            analysis_id=new_analysis.id,
+            rank=0,
+            candidate_name=c_name,
+            candidate_email="",
+            filename=file.filename,
+            score=0,
+            recommendation="",
+            resume_skills=[],
+            matched_skills=[],
+            missing_skills=[],
+            score_breakdown={},
+            strengths=[],
+            weaknesses=[],
+            resume_text=extracted_text,
+            explanation="",
+            years_of_experience=0.0,
+            llm_verdict="",
+            parsed_sections={}
+        )
+        db.add(db_candidate)
+
+    db.commit()
+    return {"session_id": new_analysis.id, "message": "Parsing complete"}
+
+# ==============================================================================
+# Endpoint 1.6: Async Evaluation (Phase 2)
+# ==============================================================================
+
+@router.post("/analyze-session/{session_id}")
+async def analyze_session(
+    session_id: int,
+    req: AnalyzeSessionRequest,
+    db: Session = Depends(get_db),
+):
+    analysis = db.query(Analysis).filter(Analysis.id == session_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Session not found.")
+        
+    candidates = db.query(CandidateModel).filter(CandidateModel.analysis_id == session_id).all()
+    if not candidates:
+        raise HTTPException(status_code=400, detail="No valid resumes found in session.")
+
+    jd_skills = extract_skills(analysis.job_description)
+    jd_required_yoe = extract_jd_yoe_requirement(analysis.job_description)
+    knockout_criteria = extract_knockout_criteria(analysis.job_description)
+
+    custom_weights = None
+    if req.use_custom_weights:
+        custom_weights = {
+            "skill": req.weight_skill,
+            "keyword": req.weight_keyword,
+            "contextual": req.weight_contextual,
+            "experience": req.weight_experience,
+            "ai": req.weight_ai
+        }
+
+    candidates_data = []
+    for c in candidates:
+        candidate_data = _run_candidate_pipeline(
+            candidate_name=c.candidate_name,
+            resume_text=c.resume_text,
+            filename=c.filename,
+            job_description=analysis.job_description,
+            jd_skills=jd_skills,
+            jd_required_yoe=jd_required_yoe,
+            knockout_criteria=knockout_criteria,
+            use_ai=req.use_ai,
+            use_ollama=req.use_ollama,
+            ollama_model=req.ollama_model,
+            custom_weights=custom_weights,
+        )
+        
+        c.score = candidate_data["score"]
+        c.recommendation = candidate_data["recommendation"]
+        c.candidate_email = candidate_data["candidate_email"]
+        c.resume_skills = candidate_data["resume_skills"]
+        c.matched_skills = candidate_data["matched_skills"]
+        c.missing_skills = candidate_data["missing_skills"]
+        c.score_breakdown = candidate_data["score_breakdown"]
+        c.strengths = candidate_data["strengths"]
+        c.weaknesses = candidate_data["weaknesses"]
+        c.explanation = candidate_data["explanation"]
+        c.years_of_experience = candidate_data["years_of_experience"]
+        c.llm_verdict = candidate_data["llm_verdict"]
+        c.parsed_sections = candidate_data["parsed_sections"]
+        
+        candidates_data.append(candidate_data)
+
+    candidates.sort(key=lambda x: x.score, reverse=True)
+    response_candidates = []
+    for idx, c in enumerate(candidates):
+        c.rank = idx + 1
+        
+        c_dict = next(item for item in candidates_data if item["filename"] == c.filename)
+        c_dict["rank"] = c.rank
+        response_candidates.append(c_dict)
+
+    db.commit()
+
+    return {
+        "analysis_id": analysis.id,
+        "summary": f"{len(response_candidates)} resumes analyzed",
+        "ranked_candidates": response_candidates,
+    }
 
 
 # ==============================================================================
