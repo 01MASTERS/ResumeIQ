@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Agentation } from "agentation";
+// import { Agentation } from "agentation";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -41,7 +41,7 @@ export default function RootLayout({
           </DashboardLayout>
           <Toaster />
         </Providers>
-        {process.env.NODE_ENV === "development" && <Agentation />}
+        {/* {process.env.NODE_ENV === "development" && <Agentation />} */}
       </body>
     </html>
   );

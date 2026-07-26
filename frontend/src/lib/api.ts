@@ -1,13 +1,12 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000',
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Types
+// ── Types ──────────────────────────────────────────────────────────────────
+
 export interface JobDescriptionResponse {
   job_description: string;
 }
@@ -49,11 +48,52 @@ export interface HistorySessionItem {
   candidates_count: number;
 }
 
-// Helpers
+// ── New session-based types ────────────────────────────────────────────────
+
+export interface CreateSessionResponse {
+  session_id: number;
+  status: string;
+  expires_at: string;
+}
+
+export interface UploadResumesResponse {
+  session_id: number;
+  accepted_count: number;
+  accepted: string[];
+  rejected: { filename: string; reason: string }[];
+}
+
+export interface CandidateCounts {
+  total: number;
+  uploaded: number;
+  preprocessing: number;
+  preprocessed: number;
+  preprocessing_failed: number;
+  evaluating: number;
+  completed: number;
+  evaluation_failed: number;
+}
+
+export interface SessionStatus {
+  session_id: number;
+  status: string;
+  expires_at: string | null;
+  candidates: CandidateCounts;
+  ready_to_analyze: boolean;
+  error_details: {
+    candidate_id: number;
+    filename: string;
+    status: string;
+    error: string;
+  }[];
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
 const mapCandidate = (c: any): CandidateResult => ({
   rank: c.rank,
   candidate_name: c.candidate_name,
-  email: c.candidate_email || "",
+  email: c.candidate_email || '',
   filename: c.filename,
   overall_score: c.score,
   recommendation: c.recommendation,
@@ -66,18 +106,67 @@ const mapCandidate = (c: any): CandidateResult => ({
   missing_skills: c.missing_skills || [],
   resume_skills: c.resume_skills || [],
   years_of_experience: c.years_of_experience || 0,
-  explanation: c.explanation || "",
-  llm_verdict: c.llm_verdict || "",
+  explanation: c.explanation || '',
+  llm_verdict: c.llm_verdict || '',
   strengths: c.strengths || [],
-  weaknesses: c.weaknesses || []
+  weaknesses: c.weaknesses || [],
 });
 
 const mapAnalysisResponse = (data: any) => ({
   ...data,
-  candidates: data.ranked_candidates ? data.ranked_candidates.map(mapCandidate) : []
+  candidates: data.ranked_candidates ? data.ranked_candidates.map(mapCandidate) : [],
 });
 
-// API Functions
+// ── New session-based API ──────────────────────────────────────────────────
+
+/** Step 1: Create analysis session from JD. Returns session_id. */
+export const createSession = async (
+  payload: { job_description: string }
+): Promise<CreateSessionResponse> => {
+  const { data } = await api.post('/sessions', payload);
+  return data;
+};
+
+/** Step 2: Upload resumes to an existing session. Returns 202 immediately. */
+export const uploadResumesToSession = async (
+  sessionId: number,
+  formData: FormData
+): Promise<UploadResumesResponse> => {
+  const { data } = await api.post(`/sessions/${sessionId}/resumes`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60_000,
+  });
+  return data;
+};
+
+/** Step 3: Poll session status for real-time preprocessing progress. */
+export const getSessionStatus = async (sessionId: number): Promise<SessionStatus> => {
+  const { data } = await api.get(`/sessions/${sessionId}/status`);
+  return data;
+};
+
+/** Step 4: Trigger lean analysis (LLM only — NLP already done in BG). */
+export const analyzeSessionNew = async (
+  sessionId: number,
+  payload: {
+    use_ai: boolean;
+    use_ollama: boolean;
+    ollama_model: string;
+    use_custom_weights: boolean;
+    weight_skill?: number;
+    weight_keyword?: number;
+    weight_contextual?: number;
+    weight_experience?: number;
+    weight_ai?: number;
+  }
+) => {
+  const { data } = await api.post(`/sessions/${sessionId}/analyze`, payload, {
+    timeout: 300_000,
+  });
+  return mapAnalysisResponse(data);
+};
+
+// ── Legacy API (kept for backward compatibility) ──────────────────────────
 
 export const submitJobDescription = async (text: string): Promise<JobDescriptionResponse> => {
   const { data } = await api.post('/job-description', { job_description: text });
@@ -86,9 +175,7 @@ export const submitJobDescription = async (text: string): Promise<JobDescription
 
 export const uploadResumes = async (formData: FormData, config: any) => {
   const { data } = await api.post('/upload-resume', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    headers: { 'Content-Type': 'multipart/form-data' },
     ...config,
   });
   return mapAnalysisResponse(data);
@@ -96,9 +183,7 @@ export const uploadResumes = async (formData: FormData, config: any) => {
 
 export const uploadAndParse = async (formData: FormData, config: any) => {
   const { data } = await api.post('/upload-and-parse', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    headers: { 'Content-Type': 'multipart/form-data' },
     ...config,
   });
   return data;
@@ -114,7 +199,9 @@ export const analyzeJson = async (payload: any, config: any) => {
   return mapAnalysisResponse(data);
 };
 
-export const inviteCandidates = async (payload: { candidates: {name: string, email: string}[], subject: string, message: string }) => {
+export const inviteCandidates = async (
+  payload: { candidates: { name: string; email: string }[]; subject: string; message: string }
+) => {
   const { data } = await api.post('/invite-candidates', payload);
   return data;
 };
@@ -124,7 +211,7 @@ export const getAnalyses = async (): Promise<HistorySessionItem[]> => {
   return data.map((item: any) => ({
     id: item.id,
     created_at: item.created_at,
-    candidates_count: item.candidate_count
+    candidates_count: item.candidate_count,
   }));
 };
 
@@ -134,9 +221,12 @@ export const getAnalysisById = async (id: string): Promise<AnalysisSession> => {
     id: data.analysis_id,
     created_at: new Date().toISOString(),
     candidates_count: data.ranked_candidates?.length || 0,
-    average_score: Math.round(data.ranked_candidates?.reduce((acc: number, c: any) => acc + c.score, 0) / (data.ranked_candidates?.length || 1)),
+    average_score: Math.round(
+      data.ranked_candidates?.reduce((acc: number, c: any) => acc + c.score, 0) /
+        (data.ranked_candidates?.length || 1)
+    ),
     job_description: data.job_description,
-    candidates: data.ranked_candidates ? data.ranked_candidates.map(mapCandidate) : []
+    candidates: data.ranked_candidates ? data.ranked_candidates.map(mapCandidate) : [],
   };
 };
 

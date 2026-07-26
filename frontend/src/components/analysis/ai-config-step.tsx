@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
-import { ArrowRight, Settings2, Cpu, SlidersHorizontal, AlertCircle } from "lucide-react";
+import { ArrowRight, Cpu, SlidersHorizontal, AlertCircle, Loader2, CheckCircle2 as CheckIcon, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { useSessionStatus } from "@/lib/useSessionStatus";
 
 export interface AIConfigData {
   use_ai: boolean;
@@ -26,6 +27,8 @@ export interface AIConfigData {
 
 interface AIConfigStepProps {
   initialConfig?: AIConfigData;
+  /** Session ID used to poll preprocessing progress */
+  sessionId: number | null;
   onNext: (config: AIConfigData) => void;
   onBack: () => void;
 }
@@ -55,7 +58,7 @@ const LABELS = {
   ai_score: "AI Score"
 };
 
-export function AIConfigStep({ initialConfig, onNext, onBack }: AIConfigStepProps) {
+export function AIConfigStep({ initialConfig, sessionId, onNext, onBack }: AIConfigStepProps) {
   const [config, setConfig] = useState<AIConfigData>(initialConfig || {
     use_ai: true,
     use_ollama: false,
@@ -63,6 +66,25 @@ export function AIConfigStep({ initialConfig, onNext, onBack }: AIConfigStepProp
     use_custom_weights: false,
     weights: { ...DEFAULT_WEIGHTS }
   });
+
+  // Poll preprocessing progress while user is on this step
+  const {
+    status,
+    preprocessingProgress,
+    isReady,
+    failedCandidates,
+    isPreprocessing,
+  } = useSessionStatus(sessionId, !!sessionId, {
+    terminalStatuses: ["ready", "completed", "failed", "expired"],
+  });
+
+  const totalCandidates = status?.candidates.total ?? 0;
+  const preprocessedCount =
+    (status?.candidates.preprocessed ?? 0) +
+    (status?.candidates.preprocessing_failed ?? 0);
+  const hasFailures = failedCandidates.length > 0;
+  // Allow analyze if session is ready, or if there's no sessionId (JSON path)
+  const canAnalyze = !sessionId || isReady;
 
   // Automatically update weights when AI toggle changes if custom weights is off
   useEffect(() => {
@@ -107,6 +129,58 @@ export function AIConfigStep({ initialConfig, onNext, onBack }: AIConfigStepProp
           Fine-tune the scoring engine and AI parameters for this analysis.
         </p>
       </div>
+
+      {/* ── Background preprocessing progress banner ── */}
+      {sessionId && totalCandidates > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-6 rounded-xl border px-4 py-3 ${
+            isReady
+              ? "border-emerald-500/30 bg-emerald-500/10"
+              : "border-primary/20 bg-primary/5"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              {isReady ? (
+                <CheckIcon className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              )}
+              <span className={isReady ? "text-emerald-300" : "text-primary"}>
+                {isReady
+                  ? `${preprocessedCount}/${totalCandidates} resume${totalCandidates !== 1 ? "s" : ""} ready`
+                  : `Preprocessing ${preprocessedCount}/${totalCandidates} resume${totalCandidates !== 1 ? "s" : ""}…`}
+              </span>
+            </div>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {preprocessingProgress}%
+            </span>
+          </div>
+
+          {/* Mini progress bar */}
+          <div className="h-1 w-full bg-white/[0.06] rounded-full overflow-hidden">
+            <motion.div
+              className={`h-full rounded-full ${
+                isReady
+                  ? "bg-emerald-500"
+                  : "bg-gradient-to-r from-primary to-accent"
+              }`}
+              initial={{ width: "0%" }}
+              animate={{ width: `${preprocessingProgress}%` }}
+              transition={{ ease: "linear", duration: 0.4 }}
+            />
+          </div>
+
+          {hasFailures && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-400">
+              <AlertTriangle className="w-3 h-3" />
+              {failedCandidates.length} resume{failedCandidates.length > 1 ? "s" : ""} could not be parsed and will be skipped.
+            </p>
+          )}
+        </motion.div>
+      )}
 
       <div className="grid gap-6">
         {/* Core AI Settings */}
@@ -274,22 +348,31 @@ export function AIConfigStep({ initialConfig, onNext, onBack }: AIConfigStepProp
 
       <div className="flex justify-between mt-8">
         <Button variant="ghost" onClick={onBack}>Back</Button>
-        <Button 
-          onClick={() => onNext(config)} 
-          size="lg" 
-          className="rounded-xl px-8" 
-          disabled={config.use_custom_weights && !isValid}
-        >
-          Begin Analysis <ArrowRight className="ml-2 w-5 h-5" />
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            onClick={() => onNext(config)}
+            size="lg"
+            className="rounded-xl px-8"
+            disabled={(config.use_custom_weights && !isValid) || !canAnalyze}
+          >
+            {!canAnalyze ? (
+              <>
+                <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                Waiting for preprocessing…
+              </>
+            ) : (
+              <>Begin Analysis <ArrowRight className="ml-2 w-5 h-5" /></>
+            )}
+          </Button>
+          {!canAnalyze && (
+            <p className="text-xs text-muted-foreground">
+              The button will enable once all resumes are ready.
+            </p>
+          )}
+        </div>
       </div>
     </motion.div>
   );
 }
 
-// Temporary icon definition since lucide might not export CheckCircle2 in all versions
-function CheckCircle2(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-  );
-}
+
