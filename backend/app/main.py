@@ -9,12 +9,12 @@ from app.routes.resume_routes import router as resume_router
 Base.metadata.create_all(bind=engine)
 os.makedirs("uploads", exist_ok=True)
 
-app = FastAPI(title="ResumeIQ Production-Grade Core Matrix Pipeline Engine")
+app = FastAPI(title="ResumeIQ - Engine")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

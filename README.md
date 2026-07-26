@@ -36,12 +36,12 @@ resumeiq/
 │   ├── Dockerfile                 # Backend container configuration
 │   └── requirements.txt           # Python dependencies
 │
-├── frontend/                      # Next.js React Frontend
+├── frontend/                      # Next.js React Frontend (V3 UI)
 │   ├── src/
 │   │   ├── app/                   # Next.js 14 App Router (Pages, Layout, Globals)
 │   │   └── components/            # React Components
-│   │       ├── CandidateEvaluation.tsx  # Interactive Leaderboard & Email Modal
-│   │       └── RequirementsForm.tsx     # Job Description setup form
+│   │       ├── analysis/          # Job Description setup & Analysis flow
+│   │       └── layout/            # Dashboard layout, Sidebar, Navbar
 │   ├── tailwind.config.ts         # Custom Tailwind theme and animations
 │   └── package.json               # Node.js dependencies
 │
@@ -61,8 +61,9 @@ The backend is responsible for all heavy lifting. When resumes are uploaded:
 
 ### 💻 Frontend (Next.js)
 The frontend uses Next.js 14's App Router for fast performance and optimal rendering. 
-- **Tailwind CSS**: Heavily customized to implement glowing orbs, floating animations, and glassmorphic modal portals.
-- **State Management**: Uses React Hooks and `react-hook-form` to manage complex file uploads and email template states.
+- **Tailwind CSS**: Heavily customized to implement glowing orbs, floating animations, glassmorphism, and responsive layouts.
+- **Ferrofluid Background**: A stunning, interactive global fluid background using `@react-spring` and `three.js`.
+- **State Management**: Uses React Hooks and `framer-motion` for complex page transitions, stepper workflows, and dynamic UI states.
 
 ---
 

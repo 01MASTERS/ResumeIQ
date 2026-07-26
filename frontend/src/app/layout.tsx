@@ -1,18 +1,47 @@
-import { Inter } from "next/font/google";
+import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "@/components/providers";
+import { Toaster } from "@/components/ui/sonner";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { Agentation } from "agentation";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+});
 
-export const metadata = {
-  title: "ResumeIQ",
-  description: "AI-Powered Resume Analysis",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "ResumeIQ — AI-Powered Resume Intelligence",
+  description: "Screen, evaluate, and rank candidates with enterprise-grade AI analysis. ResumeIQ helps you hire smarter.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-slate-950 text-slate-200 antialiased selection:bg-indigo-500/30 selection:text-indigo-200`}>
-        {children}
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
+    >
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans antialiased">
+        <Providers>
+          <DashboardLayout>
+            {children}
+          </DashboardLayout>
+          <Toaster />
+        </Providers>
+        {process.env.NODE_ENV === "development" && <Agentation />}
       </body>
     </html>
   );
