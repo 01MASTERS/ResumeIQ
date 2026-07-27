@@ -76,8 +76,10 @@ export function LeaderboardStep({ results, onReset }: LeaderboardStepProps) {
       toast.success(`Successfully sent invites to ${selectedIds.length} candidates.`);
       setIsInviteModalOpen(false);
       setSelectedIds([]);
-    } catch {
-      toast.error("Failed to send invites. Please check connection.");
+    } catch (err: any) {
+      if (!err.isGlobalError) {
+        toast.error("Failed to send invites. Please check connection.");
+      }
     } finally {
       setIsSending(false);
     }

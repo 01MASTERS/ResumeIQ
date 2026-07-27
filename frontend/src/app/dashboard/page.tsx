@@ -27,7 +27,7 @@ const itemVariants = {
 } as const;
 
 export default function DashboardPage() {
-  const { data: history, isLoading } = useQuery({
+  const { data: history, isLoading, isError } = useQuery({
     queryKey: ['analyses'],
     queryFn: getAnalyses,
   });
@@ -168,6 +168,17 @@ export default function DashboardPage() {
                 {[1, 2, 3].map(i => (
                   <Skeleton key={i} className="h-16 w-full" />
                 ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-16 flex flex-col items-center">
+                <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mb-4">
+                  <FileText className="w-7 h-7 text-destructive" />
+                </div>
+                <h3 className="text-base font-medium mb-1.5 text-destructive">Failed to load analyses</h3>
+                <p className="text-sm text-muted-foreground mb-6">We could not retrieve your recent analyses. Please check your connection or try again.</p>
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Retry
+                </Button>
               </div>
             ) : history && history.length > 0 ? (
               <div className="space-y-2">

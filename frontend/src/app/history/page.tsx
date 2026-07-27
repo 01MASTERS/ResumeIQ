@@ -43,7 +43,7 @@ export default function HistoryPage() {
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const { data: history, isLoading } = useQuery({
+  const { data: history, isLoading, isError } = useQuery({
     queryKey: ['analyses'],
     queryFn: getAnalyses,
   });
@@ -103,6 +103,17 @@ export default function HistoryPage() {
                   <TableCell className="text-right"><Skeleton className="h-7 w-20 ml-auto" /></TableCell>
                 </TableRow>
               ))
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-52 text-center">
+                  <div className="flex flex-col items-center justify-center">
+                    <HistoryIcon className="w-10 h-10 mb-3 text-destructive opacity-80" />
+                    <p className="text-sm font-medium text-destructive mb-1">Failed to load history</p>
+                    <p className="text-xs text-muted-foreground mb-4">We could not retrieve your analysis history.</p>
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry</Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : !history || history.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="h-52 text-center">

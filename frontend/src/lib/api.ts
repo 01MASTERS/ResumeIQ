@@ -5,6 +5,22 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+import { toast } from "sonner";
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (!error.response) {
+      toast.error("Network Error: Cannot connect to the server. Please check your connection.");
+      error.isGlobalError = true;
+    } else if (error.response.status >= 500) {
+      toast.error("Server Error: The backend encountered an unexpected condition.");
+      error.isGlobalError = true;
+    }
+    return Promise.reject(error);
+  }
+);
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface JobDescriptionResponse {

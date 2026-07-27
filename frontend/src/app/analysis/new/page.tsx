@@ -62,10 +62,11 @@ export default function NewAnalysisPage() {
     try {
       const { session_id } = await createSession({ job_description: jd });
       setSessionId(session_id);
-    } catch {
-      // Non-fatal — the session will be created on upload instead.
-      // Show a warning so the user knows.
-      toast.warning("Could not connect to backend. Check that the server is running.");
+    } catch (err: any) {
+      if (!err.isGlobalError) {
+        toast.warning("Failed to initialize session from Job Description.");
+      }
+      return;
     }
     setCurrentStep("resume_upload");
   };
@@ -106,9 +107,11 @@ export default function NewAnalysisPage() {
 
       // 202 Accepted — BG preprocessing has started, move to AI Config
       setCurrentStep("ai_config");
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: { message?: string } } }, message?: string })?.response?.data?.detail?.message || (err as { message?: string })?.message || "Upload failed.";
-      toast.error(msg);
+    } catch (err: any) {
+      if (!err.isGlobalError) {
+        const msg = err?.response?.data?.detail?.message || err?.message || "Upload failed.";
+        toast.error(msg);
+      }
     }
   };
 

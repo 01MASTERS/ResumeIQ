@@ -71,7 +71,9 @@ export function ProcessingStep({
             analysisRan.current = false; // allow retry
           }, 3000);
         } else {
-          toast.error("Analysis failed. Please try again.");
+          if (!(err as any).isGlobalError) {
+            toast.error("Analysis failed. Please try again.");
+          }
           setTimeout(() => onError(), 1500);
         }
       }
@@ -96,8 +98,10 @@ export function ProcessingStep({
         };
         const results = await analyzeJson(payload, { timeout: 300_000 });
         onComplete(results?.candidates ?? []);
-      } catch {
-        toast.error("Analysis failed. The backend may be unreachable.");
+      } catch (err: any) {
+        if (!err.isGlobalError) {
+          toast.error("Analysis failed. The backend may be unreachable.");
+        }
         setTimeout(() => onError(), 1500);
       }
     };

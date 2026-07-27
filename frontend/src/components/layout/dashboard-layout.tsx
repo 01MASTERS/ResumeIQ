@@ -33,6 +33,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="relative z-10 p-6 md:p-8 lg:p-10 max-w-[1600px] mx-auto w-full">
             {children}
           </div>
+
+          {/* Floating Demo Mode Badge */}
+          <div className="fixed bottom-6 right-6 z-[100] bg-white/[0.04] border border-white/[0.1] text-foreground/90 backdrop-blur-xl px-4 py-2.5 rounded-full text-xs font-medium flex items-center shadow-2xl hover:bg-white/[0.08] transition-colors">
+            <span className="w-2 h-2 rounded-full bg-primary mr-2.5 animate-pulse shadow-[0_0_10px_rgba(var(--primary),0.8)]"></span>
+            Demo Mode <span className="text-muted-foreground ml-1.5 font-normal">(Backend Offline)</span>
+          </div>
         </main>
       </div>
     </div>
