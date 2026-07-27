@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000',
@@ -46,6 +46,7 @@ export interface HistorySessionItem {
   id: string;
   created_at: string;
   candidates_count: number;
+  average_score: number;
 }
 
 // ── New session-based types ────────────────────────────────────────────────
@@ -90,6 +91,7 @@ export interface SessionStatus {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapCandidate = (c: any): CandidateResult => ({
   rank: c.rank,
   candidate_name: c.candidate_name,
@@ -112,6 +114,7 @@ const mapCandidate = (c: any): CandidateResult => ({
   weaknesses: c.weaknesses || [],
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapAnalysisResponse = (data: any) => ({
   ...data,
   candidates: data.ranked_candidates ? data.ranked_candidates.map(mapCandidate) : [],
@@ -173,7 +176,7 @@ export const submitJobDescription = async (text: string): Promise<JobDescription
   return { job_description: data.received_jd };
 };
 
-export const uploadResumes = async (formData: FormData, config: any) => {
+export const uploadResumes = async (formData: FormData, config?: AxiosRequestConfig) => {
   const { data } = await api.post('/upload-resume', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     ...config,
@@ -181,7 +184,7 @@ export const uploadResumes = async (formData: FormData, config: any) => {
   return mapAnalysisResponse(data);
 };
 
-export const uploadAndParse = async (formData: FormData, config: any) => {
+export const uploadAndParse = async (formData: FormData, config?: AxiosRequestConfig) => {
   const { data } = await api.post('/upload-and-parse', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     ...config,
@@ -189,12 +192,12 @@ export const uploadAndParse = async (formData: FormData, config: any) => {
   return data;
 };
 
-export const analyzeSession = async (sessionId: string | number, payload: any, config: any) => {
+export const analyzeSession = async (sessionId: string | number, payload: Record<string, unknown>, config?: AxiosRequestConfig) => {
   const { data } = await api.post(`/analyze-session/${sessionId}`, payload, config);
   return mapAnalysisResponse(data);
 };
 
-export const analyzeJson = async (payload: any, config: any) => {
+export const analyzeJson = async (payload: Record<string, unknown>, config?: AxiosRequestConfig) => {
   const { data } = await api.post('/analyze-json', payload, config);
   return mapAnalysisResponse(data);
 };
@@ -208,10 +211,12 @@ export const inviteCandidates = async (
 
 export const getAnalyses = async (): Promise<HistorySessionItem[]> => {
   const { data } = await api.get('/analyses');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return data.map((item: any) => ({
     id: item.id,
     created_at: item.created_at,
     candidates_count: item.candidate_count,
+    average_score: item.average_score || 0,
   }));
 };
 
@@ -222,6 +227,7 @@ export const getAnalysisById = async (id: string): Promise<AnalysisSession> => {
     created_at: new Date().toISOString(),
     candidates_count: data.ranked_candidates?.length || 0,
     average_score: Math.round(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data.ranked_candidates?.reduce((acc: number, c: any) => acc + c.score, 0) /
         (data.ranked_candidates?.length || 1)
     ),

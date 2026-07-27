@@ -13,7 +13,7 @@ import {
   Shield,
   Zap,
   BarChart3,
-  Users,
+
   ChevronRight,
 } from "lucide-react";
 import Image from "next/image";

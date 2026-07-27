@@ -11,7 +11,6 @@ import {
   CandidateResult,
   createSession,
   uploadResumesToSession,
-  analyzeJson,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { FileText, ChevronDown, ChevronUp } from "lucide-react";
@@ -107,8 +106,8 @@ export default function NewAnalysisPage() {
 
       // 202 Accepted — BG preprocessing has started, move to AI Config
       setCurrentStep("ai_config");
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail?.message || err?.message || "Upload failed.";
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: { message?: string } } }, message?: string })?.response?.data?.detail?.message || (err as { message?: string })?.message || "Upload failed.";
       toast.error(msg);
     }
   };

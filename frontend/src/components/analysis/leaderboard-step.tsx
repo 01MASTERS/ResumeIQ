@@ -10,14 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Progress } from "@/components/ui/progress";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis 
-} from "recharts";
+
 import { Brain, FileText, CheckCircle, XCircle, Send, Plus, Mail } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -37,12 +33,7 @@ const REC_COLORS: Record<string, string> = {
   'Disqualified': 'bg-rose-500/20 text-rose-500 border-rose-500/30'
 };
 
-const PIE_COLORS: Record<string, string> = {
-  'Strong fit': '#10b981',
-  'Moderate fit': '#3b82f6',
-  'Weak fit': '#f59e0b',
-  'Disqualified': '#f43f5e'
-};
+
 
 export function LeaderboardStep({ results, onReset }: LeaderboardStepProps) {
   const [minScore, setMinScore] = useState(0);
@@ -85,44 +76,18 @@ export function LeaderboardStep({ results, onReset }: LeaderboardStepProps) {
       toast.success(`Successfully sent invites to ${selectedIds.length} candidates.`);
       setIsInviteModalOpen(false);
       setSelectedIds([]);
-    } catch (e) {
+    } catch {
       toast.error("Failed to send invites. Please check connection.");
     } finally {
       setIsSending(false);
     }
   };
 
-  // Analytics Data
-  const recData = useMemo(() => {
-    const counts: Record<string, number> = { 'Strong Hire': 0, 'Hire': 0, 'Review': 0, 'Reject': 0 };
-    results.forEach(r => {
-      if (counts[r.recommendation] !== undefined) {
-        counts[r.recommendation]++;
-      } else {
-        counts[r.recommendation] = 1;
-      }
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
-  }, [results]);
+
 
   const hasAiEvaluation = useMemo(() => {
     return results.some(r => r.llm_score > 0 || (r.llm_verdict && r.llm_verdict.length > 0));
   }, [results]);
-
-  const avgScores = useMemo(() => {
-    if (results.length === 0) return [];
-    const avg = (key: keyof CandidateResult) => Math.round(results.reduce((acc, r) => acc + (r[key] as number), 0) / results.length);
-    const scores = [
-      { subject: 'Skills', A: avg('skill_match'), fullMark: 100 },
-      { subject: 'Keywords', A: avg('tf_idf_similarity'), fullMark: 100 },
-      { subject: 'Context', A: avg('semantic_similarity'), fullMark: 100 },
-      { subject: 'Experience', A: avg('experience'), fullMark: 100 },
-    ];
-    if (hasAiEvaluation) {
-      scores.push({ subject: 'AI Score', A: avg('llm_score'), fullMark: 100 });
-    }
-    return scores;
-  }, [results, hasAiEvaluation]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]";
@@ -299,7 +264,9 @@ export function LeaderboardStep({ results, onReset }: LeaderboardStepProps) {
                         { label: 'Contextual', value: candidate.semantic_similarity, color: 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' },
                         { label: 'Experience', value: candidate.experience, color: 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' },
                         hasAiEvaluation ? { label: 'AI Score', value: candidate.llm_score, color: 'bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]' } : null,
-                      ].filter(Boolean).map((score: any, idx) => (
+                      ].filter(Boolean).map((score: { label: string; value: number; color: string } | null, idx) => {
+                        if (!score) return null;
+                        return (
                         <div key={score.label} className={idx !== 0 ? "lg:border-l lg:border-white/5 lg:pl-3" : ""}>
                           <div className="flex justify-between items-end mb-1">
                             <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none tracking-wider">{score.label}</p>
@@ -311,7 +278,8 @@ export function LeaderboardStep({ results, onReset }: LeaderboardStepProps) {
                           </div>
                           <p className="text-xs font-black text-foreground">{score.value}%</p>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

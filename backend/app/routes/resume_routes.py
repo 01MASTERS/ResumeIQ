@@ -494,15 +494,18 @@ def get_analyses_history(db: Session = Depends(get_db)):
     results = db.query(Analysis).order_by(Analysis.created_at.desc()).all()
     history_payload = []
     for item in results:
-        count = (
+        candidates = (
             db.query(CandidateModel)
             .filter(CandidateModel.analysis_id == item.id)
-            .count()
+            .all()
         )
+        count = len(candidates)
+        avg_score = sum((c.score or 0) for c in candidates) / count if count > 0 else 0
         history_payload.append({
             "id": item.id,
             "created_at": item.created_at.isoformat(),
             "candidate_count": count,
+            "average_score": round(avg_score),
         })
     return history_payload
 

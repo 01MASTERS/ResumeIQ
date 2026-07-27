@@ -4,10 +4,10 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useRef, useCallback } from "react";
-import { 
+import {
   ArrowRight, UploadCloud, FileType, 
-  Trash2, Eye, FileJson, CheckCircle2,
-  AlertCircle, X
+  Trash2, Eye, FileJson,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,14 +17,14 @@ interface ResumeUploadStepProps {
   onBack: () => void;
 }
 
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+
 export function ResumeUploadStep({ onNext, onBack }: ResumeUploadStepProps) {
   const [files, setFiles] = useState<{file: File, id: string, preview: string, error?: string}[]>([]);
   const [jsonInput, setJsonInput] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-  const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
   const handleFiles = useCallback((newFiles: FileList | File[]) => {
     const fileArray = Array.from(newFiles);
@@ -90,8 +90,8 @@ export function ResumeUploadStep({ onNext, onBack }: ResumeUploadStepProps) {
       const parsed = JSON.parse(jsonInput);
       if (!Array.isArray(parsed)) throw new Error("Must be an array of candidates");
       onNext({ type: 'json', data: jsonInput });
-    } catch (e: any) {
-      toast.error(`Invalid JSON: ${e.message}`);
+    } catch (e: unknown) {
+      toast.error(`Invalid JSON: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 

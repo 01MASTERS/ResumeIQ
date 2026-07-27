@@ -43,7 +43,7 @@ function ProgressTrack({ className, ...props }: ProgressPrimitive.Track.Props) {
   )
 }
 
-const MotionIndicator = motion(ProgressPrimitive.Indicator as any);
+const MotionIndicator = motion.create(ProgressPrimitive.Indicator as React.ElementType);
 
 function ProgressIndicator({
   className,

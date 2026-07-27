@@ -9,7 +9,7 @@ function Tooltip({ ...props }) {
   return <TooltipPrimitive.Root {...props} />
 }
 
-function TooltipTrigger({ ...props }: any) {
+function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
   return <TooltipPrimitive.Trigger {...props} />
 }
 
@@ -17,7 +17,7 @@ function TooltipContent({
   className,
   children,
   ...props
-}: any) {
+}: TooltipPrimitive.Popup.Props) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Popup

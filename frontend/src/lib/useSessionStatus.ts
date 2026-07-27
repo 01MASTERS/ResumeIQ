@@ -40,7 +40,7 @@ export function useSessionStatus(
   // when the options object is recreated on every render.
   const terminalStatusesStr = terminalStatuses.join(',');
 
-  const poll = useCallback(async () => {
+  const poll = useCallback(async function pollFn() {
     if (!sessionId || !activeRef.current) return;
 
     try {
@@ -52,14 +52,14 @@ export function useSessionStatus(
         activeRef.current = false;
         return; // stop polling
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Don't stop polling on transient network errors — just log
-      setError(err?.message ?? 'Status poll failed');
+      setError(err instanceof Error ? err.message : 'Status poll failed');
     }
 
     // Schedule next poll (setTimeout ensures no overlap)
     if (activeRef.current) {
-      timerRef.current = setTimeout(poll, intervalMs);
+      timerRef.current = setTimeout(pollFn, intervalMs);
     }
   }, [sessionId, intervalMs, terminalStatusesStr]);
 

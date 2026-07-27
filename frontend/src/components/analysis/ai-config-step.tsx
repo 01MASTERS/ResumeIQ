@@ -73,7 +73,6 @@ export function AIConfigStep({ initialConfig, sessionId, onNext, onBack }: AICon
     preprocessingProgress,
     isReady,
     failedCandidates,
-    isPreprocessing,
   } = useSessionStatus(sessionId, !!sessionId, {
     terminalStatuses: ["ready", "completed", "failed", "expired"],
   });
@@ -86,15 +85,7 @@ export function AIConfigStep({ initialConfig, sessionId, onNext, onBack }: AICon
   // Allow analyze if session is ready, or if there's no sessionId (JSON path)
   const canAnalyze = !sessionId || isReady;
 
-  // Automatically update weights when AI toggle changes if custom weights is off
-  useEffect(() => {
-    if (!config.use_custom_weights) {
-      setConfig(prev => ({
-        ...prev,
-        weights: prev.use_ai ? { ...DEFAULT_WEIGHTS } : { ...NO_AI_WEIGHTS }
-      }));
-    }
-  }, [config.use_ai, config.use_custom_weights]);
+
 
   const handleWeightChange = (key: keyof typeof config.weights, value: number) => {
     setConfig(prev => ({
@@ -110,7 +101,7 @@ export function AIConfigStep({ initialConfig, sessionId, onNext, onBack }: AICon
   const isValid = totalWeight === 100;
 
   const chartData = Object.entries(config.weights)
-    .filter(([_, value]) => value > 0)
+    .filter(([, value]) => value > 0)
     .map(([key, value]) => ({
       name: LABELS[key as keyof typeof LABELS],
       value
@@ -200,7 +191,11 @@ export function AIConfigStep({ initialConfig, sessionId, onNext, onBack }: AICon
               </div>
               <Switch 
                 checked={config.use_ai} 
-                onCheckedChange={(v) => setConfig({...config, use_ai: v})} 
+                onCheckedChange={(v) => setConfig(prev => ({
+                  ...prev, 
+                  use_ai: v,
+                  weights: !prev.use_custom_weights ? (v ? { ...DEFAULT_WEIGHTS } : { ...NO_AI_WEIGHTS }) : prev.weights
+                }))} 
                 className="data-[state=checked]:bg-primary"
               />
             </div>
@@ -255,7 +250,11 @@ export function AIConfigStep({ initialConfig, sessionId, onNext, onBack }: AICon
               <Label className="text-sm">Custom Weights</Label>
               <Switch 
                 checked={config.use_custom_weights} 
-                onCheckedChange={(v) => setConfig({...config, use_custom_weights: v})} 
+                onCheckedChange={(v) => setConfig(prev => ({
+                  ...prev, 
+                  use_custom_weights: v,
+                  weights: !v ? (prev.use_ai ? { ...DEFAULT_WEIGHTS } : { ...NO_AI_WEIGHTS }) : prev.weights
+                }))} 
               />
             </div>
           </div>
@@ -270,7 +269,7 @@ export function AIConfigStep({ initialConfig, sessionId, onNext, onBack }: AICon
               >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
                   <div className="space-y-6">
-                    {Object.entries(config.weights).map(([key, value], idx) => {
+                    {Object.entries(config.weights).map(([key, value]) => {
                       if (!config.use_ai && (key === 'contextual_match' || key === 'ai_score')) return null;
                       return (
                         <div key={key} className="space-y-3">

@@ -4,13 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FileText,
   History,
   LayoutDashboard,
-  Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut,
   Menu,
   X,
   FilePlus2

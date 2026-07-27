@@ -50,7 +50,7 @@ export function JobDescriptionStep({ onNext }: JobDescriptionStepProps) {
         </div>
         <h2 className="text-3xl font-bold tracking-tight mb-2">Job Description</h2>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Paste the job description you're hiring for. Our AI will extract key requirements, skills, and context to evaluate candidates.
+          Paste the job description you&apos;re hiring for. Our AI will extract key requirements, skills, and context to evaluate candidates.
         </p>
       </div>
 

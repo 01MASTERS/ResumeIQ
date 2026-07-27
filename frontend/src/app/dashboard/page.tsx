@@ -34,8 +34,31 @@ export default function DashboardPage() {
 
   const totalAnalyses = history?.length || 0;
   const candidatesScreened = history?.reduce((acc, curr) => acc + (curr.candidates_count || 0), 0) || 0;
-  const avgMatchScore = 85;
-  const invitesSent = 12;
+  const avgMatchScore = history && history.length > 0
+    ? Math.round(history.reduce((acc, curr) => acc + (curr.average_score || 0), 0) / history.length)
+    : 0;
+
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const thisMonthCount = history?.filter(h => {
+    const d = new Date(h.created_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length || 0;
+  
+  const lastMonthCount = history?.filter(h => {
+    const d = new Date(h.created_at);
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+  }).length || 0;
+
+  let growthTrend = 0;
+  if (lastMonthCount === 0 && thisMonthCount > 0) {
+    growthTrend = 100;
+  } else if (lastMonthCount > 0) {
+    growthTrend = Math.round(((thisMonthCount - lastMonthCount) / lastMonthCount) * 100);
+  }
 
   const stats = [
     {
@@ -64,7 +87,7 @@ export default function DashboardPage() {
     },
     {
       title: "Growth Trend",
-      value: `+${invitesSent}%`,
+      value: `${growthTrend > 0 ? '+' : ''}${growthTrend}%`,
       icon: TrendingUp,
       gradient: "from-amber-500/20 to-amber-500/5",
       iconColor: "text-amber-400",
@@ -100,7 +123,7 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => (
+        {stats.map((stat) => (
           <motion.div
             key={stat.title}
             variants={itemVariants}

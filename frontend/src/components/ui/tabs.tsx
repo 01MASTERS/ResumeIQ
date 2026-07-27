@@ -47,7 +47,7 @@ function TabsTrigger({ className, children, ...props }: TabsPrimitive.Tab.Props)
       render={(renderProps, state) => {
         // Render prop provided by Base UI gives us the state.active boolean
         return (
-          <button {...(renderProps as any)}>
+          <button {...(renderProps as React.ButtonHTMLAttributes<HTMLButtonElement>)}>
             {state.active && (
               <motion.div
                 layoutId="activeTabIndicator"
